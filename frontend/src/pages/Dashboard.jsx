@@ -13,10 +13,13 @@ export default function Dashboard() {
   const [portfolio, setPortfolio] = useState(null)
   const [topAction, setTopAction] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [waking, setWaking] = useState(false)
 
   useEffect(() => {
     setLoading(true)
     const capital = parseFloat(localStorage.getItem('userCapital')) || 100
+    // Si tarda más de 3s, probablemente Render está despertando
+    const wakingTimer = setTimeout(() => setWaking(true), 3000)
     Promise.all([
       api.get('/recommendations?limit=5'),
       api.get('/arbitrage?minProfit=5'),
@@ -31,10 +34,11 @@ export default function Dashboard() {
       setMovers(sorted.slice(0, 8))
       setPortfolio(p)
       setTopAction(ap?.plans?.[0] || null)
-    }).catch(console.error).finally(() => setLoading(false))
+    }).catch(console.error).finally(() => { clearTimeout(wakingTimer); setWaking(false); setLoading(false) })
+    return () => clearTimeout(wakingTimer)
   }, [])
 
-  if (loading) return <LoadingState />
+  if (loading) return <LoadingState waking={waking} />
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -212,9 +216,15 @@ function PortfolioRow({ label, value }) {
   )
 }
 
-function LoadingState() {
+function LoadingState({ waking }) {
   return (
     <div className="p-6">
+      {waking && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-yellow-500/40 bg-yellow-500/5 px-4 py-3 text-yellow-400 text-sm">
+          <span className="animate-spin text-lg">⚙️</span>
+          <span><strong>Despertando el servidor...</strong> El servidor gratuito duerme tras inactividad. Puede tardar hasta 30 segundos. Por favor espera.</span>
+        </div>
+      )}
       <div className="animate-pulse space-y-4">
         <div className="h-8 bg-[#1a2235] rounded w-48" />
         <div className="grid grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-[#1a2235] rounded-xl" />)}</div>
