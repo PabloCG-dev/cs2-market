@@ -18,16 +18,11 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors({
   origin: (origin, callback) => {
-    const allowed = [
-      'http://localhost:5173',
-      'http://localhost:4173',
-      process.env.FRONTEND_URL,         // tu URL de Vercel, p.ej. https://cs2-market.vercel.app
-    ].filter(Boolean);
-    if (!origin || allowed.some(a => origin.startsWith(a))) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS bloqueado: ${origin}`));
+    // Permitir: sin origin (curl/Postman), localhost, cualquier subdominio de vercel.app
+    if (!origin || origin.includes('localhost') || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
     }
+    callback(new Error(`CORS bloqueado: ${origin}`));
   },
   credentials: true,
 }));
