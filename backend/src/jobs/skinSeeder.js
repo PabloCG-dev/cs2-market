@@ -143,17 +143,23 @@ async function seedAllSkins() {
         insertSkin.run(skinId, skinName, weaponName, categoryId, rarityName, wearInfo.code, imageUrl);
         insertPrice.run(skinId, p.steam, p.buff163, p.csfloat, p.skinport, p.dmarket, vol);
 
-        const history = generateHistory(steamPrice, 90);
-        for (const h of history) {
-          insertHistory.run(skinId, 'steam', h.price, h.volume, h.date);
+        // Solo generar historial para skins con precio >= 2€ (son las que se analizan)
+        // Esto reduce los inserts de ~800k a ~75k — 10x menos carga
+        if (steamPrice >= 2.0) {
+          const history = generateHistory(steamPrice, 30); // 30 días es suficiente (mínimo requerido: 14)
+          for (const h of history) {
+            insertHistory.run(skinId, 'steam', h.price, h.volume, h.date);
+          }
         }
 
         inserted++;
         batchCount++;
 
-        // Commit parcial cada 300 skins para no saturar memoria/transacción
+        // Commit parcial cada 300 skins + ceder el event loop para no bloquear HTTP
         if (batchCount >= 300) {
           db.exec('COMMIT');
+          // Yield al event loop: las peticiones HTTP pendientes se procesan aquí
+          await new Promise(resolve => setImmediate(resolve));
           db.exec('BEGIN');
           batchCount = 0;
           console.log(`[SkinSeeder]  ↳ ${inserted} skins procesadas...`);
