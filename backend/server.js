@@ -43,8 +43,12 @@ app.use('/api/images', imagesRouter);
 app.use('/api/action-plan', actionPlanRouter);
 
 app.get('/api/health', (req, res) => {
-  const skinCount = getDB().prepare('SELECT COUNT(*) as c FROM skins').get().c;
-  res.json({ status: 'ok', skins: skinCount, timestamp: new Date().toISOString() });
+  try {
+    const skinCount = getDB().prepare('SELECT COUNT(*) as c FROM skins').get().c;
+    res.json({ status: 'ok', skins: skinCount, timestamp: new Date().toISOString() });
+  } catch {
+    res.json({ status: 'starting', skins: 0, timestamp: new Date().toISOString() });
+  }
 });
 
 // Actualización de precios cada hora
@@ -54,11 +58,21 @@ cron.schedule('0 * * * *', () => {
 });
 
 async function start() {
-  initializeDB();
+  // Escuchar PRIMERO — Render necesita que el puerto responda rápido o mata el proceso
   app.listen(PORT, () => {
     console.log(`\n🎮 CS2 Market API corriendo en http://localhost:${PORT}`);
     console.log(`📊 Dashboard disponible en http://localhost:5173\n`);
   });
+
+  // Inicializar BD en background para no bloquear el puerto
+  setTimeout(() => {
+    try {
+      initializeDB();
+      console.log('[DB] Inicializada correctamente');
+    } catch (err) {
+      console.error('[DB] Error al inicializar:', err.message);
+    }
+  }, 100);
 
   // Cargar catálogo completo en background (no bloquea el servidor)
   setTimeout(async () => {
@@ -70,7 +84,7 @@ async function start() {
       console.warn('[Startup] No se pudo cargar el catálogo completo:', err.message);
       console.log('[Startup] Continuando con las skins ya cargadas en la BD.');
     }
-  }, 1500);
+  }, 2000);
 }
 
 start();
