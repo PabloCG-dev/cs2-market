@@ -1,4 +1,13 @@
 require('dotenv').config();
+
+// Evitar que cualquier error inesperado mate el proceso
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH PREVENIDO] uncaughtException:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[CRASH PREVENIDO] unhandledRejection:', reason);
+});
+
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
@@ -49,14 +58,20 @@ app.get('/api/health', (req, res) => {
 // Actualización de precios cada hora
 cron.schedule('0 * * * *', () => {
   console.log('[CRON] Actualizando precios...');
-  runPriceUpdate();
+  try { runPriceUpdate(); } catch(e) { console.error('[CRON] Error:', e.message); }
+});
+
+// Middleware de errores global — nunca deja que un error 500 se propague sin respuesta
+app.use((err, req, res, next) => {
+  console.error('[EXPRESS ERROR]', err.message);
+  if (!res.headersSent) res.status(500).json({ error: 'Error interno del servidor' });
 });
 
 async function start() {
   // Escuchar PRIMERO — Render necesita que el puerto responda rápido o mata el proceso
   app.listen(PORT, () => {
     console.log(`\n🎮 CS2 Market API corriendo en http://localhost:${PORT}`);
-    console.log(`📊 Dashboard disponible en http://localhost:5173\n`);
+    console.log(`[Startup] Puerto ${PORT} abierto. Inicializando BD en background...`);
   });
 
   // Inicializar BD en background para no bloquear el puerto
@@ -65,7 +80,7 @@ async function start() {
       initializeDB();
       console.log('[DB] Inicializada correctamente');
     } catch (err) {
-      console.error('[DB] Error al inicializar:', err.message);
+      console.error('[DB] Error al inicializar:', err.message, err.stack);
     }
   }, 100);
 
@@ -73,11 +88,12 @@ async function start() {
   setTimeout(async () => {
     try {
       const before = getDB().prepare('SELECT COUNT(*) as c FROM skins').get().c;
-      console.log(`[Startup] BD tiene ${before} skins. Descargando catálogo completo...`);
+      console.log(`[Seeder] BD tiene ${before} skins. ${before < 1000 ? 'Descargando catálogo completo...' : 'Catálogo ya cargado, verificando novedades...'}`);
       await seedAllSkins();
+      const after = getDB().prepare('SELECT COUNT(*) as c FROM skins').get().c;
+      console.log(`[Seeder] Completado. Total skins: ${after}`);
     } catch (err) {
-      console.warn('[Startup] No se pudo cargar el catálogo completo:', err.message);
-      console.log('[Startup] Continuando con las skins ya cargadas en la BD.');
+      console.error('[Seeder] Error (servidor sigue activo):', err.message, err.stack);
     }
   }, 2000);
 }
