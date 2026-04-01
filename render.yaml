@@ -12,8 +12,4 @@ services:
       - key: PORT
         value: 3001
       - key: FRONTEND_URL
-        sync: false  # lo pones tú en el dashboard de Render con tu URL de Vercel
-    disk:
-      name: sqlite-data
-      mountPath: /data
-      sizeGB: 1
+        value: https://cs2-market-pablo.vercel.app

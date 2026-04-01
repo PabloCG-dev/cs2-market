@@ -1,25 +1,19 @@
-// Node.js 22.5+ tiene SQLite nativo - sin compilación nativa necesaria
-const { DatabaseSync } = require('node:sqlite');
+const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { SKINS_DATA, CASES_DATA } = require('../data/skins');
 
-const path = require('path');
+const DB_PATH = path.join(process.cwd(), 'cs2market.db');
 
-const DB_PATH = process.env.NODE_ENV === 'production'
-  ? '/data/cs2market.db'
-  : path.join(__dirname, '../../cs2market.db');
-
-// Asegurarse de que el directorio existe (en Render /data ya existe, pero por si acaso)
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 let db;
 
 function getDB() {
   if (!db) {
-    db = new DatabaseSync(DB_PATH);
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA foreign_keys = ON');
+    db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
   }
   return db;
 }
