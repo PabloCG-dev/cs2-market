@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: cs2-market-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        sync: false  # lo pones tú en el dashboard de Render con tu URL de Vercel
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1
