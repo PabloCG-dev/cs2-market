@@ -23,15 +23,22 @@ router.get('/', (req, res) => {
     const db = getDB();
     const capital = parseFloat(req.query.capital) || 200;
 
+    // Limitar a top 500 skins por precio — suficiente para buenas recomendaciones
     const skins = db.prepare(`
       SELECT s.*, sp.steam, sp.buff163, sp.csfloat, sp.skinport, sp.dmarket
       FROM skins s
       LEFT JOIN skin_prices sp ON s.id = sp.skin_id
-      WHERE sp.steam >= 1.0
+      WHERE sp.steam >= 2.0
+      ORDER BY sp.steam DESC
+      LIMIT 500
     `).all();
 
+    if (skins.length === 0) return res.json({ plans: [], totalCapital: capital });
+
+    // Batch: traer historial solo de las skins que vamos a analizar
+    const ids = skins.map(s => `'${s.id.replace(/'/g, "''")}'`).join(',');
     const history = db.prepare(
-      'SELECT skin_id, date, price, volume FROM price_history ORDER BY skin_id, date'
+      `SELECT skin_id, date, price, volume FROM price_history WHERE skin_id IN (${ids}) ORDER BY skin_id, date`
     ).all();
 
     // Agrupar historial por skin

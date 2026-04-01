@@ -100,6 +100,12 @@ function initializeDB() {
       date TEXT NOT NULL,
       FOREIGN KEY (case_id) REFERENCES cases(id)
     );
+
+    -- Índices para acelerar las queries de recomendaciones y action-plan
+    CREATE INDEX IF NOT EXISTS idx_skin_prices_steam ON skin_prices(steam);
+    CREATE INDEX IF NOT EXISTS idx_skin_prices_skin_id ON skin_prices(skin_id);
+    CREATE INDEX IF NOT EXISTS idx_price_history_skin_id ON price_history(skin_id);
+    CREATE INDEX IF NOT EXISTS idx_price_history_platform ON price_history(platform);
   `);
 
   // Populate with seed data if empty
