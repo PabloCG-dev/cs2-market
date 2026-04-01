@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "CS2 Skin Market Analysis Backend - Maximiza beneficio en inversión de skins",
   "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
